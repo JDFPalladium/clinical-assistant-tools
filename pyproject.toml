@@ -1,12 +1,11 @@
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "clinical_assistant_tools"  # use underscore to avoid confusion
+name = "clinical_assistant_tools"
 version = "0.1.0"
 description = "Standalone tools for the clinician assistant project"
-packages = ["ai_tools"]
 authors = [
     { name = "Jonathan Friedman", email = "Jonathan.Friedman@thepalladiumgroup.com" }
 ]
@@ -16,3 +15,7 @@ dependencies = [
     "langchain_openai",
     "llama-index"
 ]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["ai_tools*"]
