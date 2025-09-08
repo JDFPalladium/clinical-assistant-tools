@@ -6,6 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "clinical-assistant-tools"
 version = "0.1.0"
 description = "Standalone tools for the clinician assistant project"
+packages = ["ai_tools"]
 authors = [
   { name="Jonathan Friedman", email="Jonathan.Friedman@thepalladiumgroup.com" }
 ]
