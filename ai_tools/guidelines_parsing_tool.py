@@ -6,7 +6,7 @@ from llama_index.core.retrievers import VectorIndexRetriever
 from llama_index.core.postprocessor import LLMRerank
 from llama_index.llms.openai import OpenAI
 from llama_index.embeddings.openai import OpenAIEmbedding
-from .helpers import expand_query, cosine_similarity_numpy, format_sources_for_html
+from ai_tools.helpers import expand_query, cosine_similarity_numpy, format_sources_for_html
 
 # -------------------------------
 # Lazy-loaded globals for standalone usage
