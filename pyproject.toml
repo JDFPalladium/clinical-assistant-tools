@@ -3,12 +3,12 @@ requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "clinical-assistant-tools"
+name = "clinical_assistant_tools"  # use underscore to avoid confusion
 version = "0.1.0"
 description = "Standalone tools for the clinician assistant project"
 packages = ["ai_tools"]
 authors = [
-  { name="Jonathan Friedman", email="Jonathan.Friedman@thepalladiumgroup.com" }
+    { name = "Jonathan Friedman", email = "Jonathan.Friedman@thepalladiumgroup.com" }
 ]
 dependencies = [
     "numpy",
