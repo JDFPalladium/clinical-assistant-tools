@@ -6,6 +6,7 @@ import sqlite3
 from collections import Counter
 from datetime import datetime
 from typing import List
+from unittest import case
 
 from pydantic import BaseModel, Field
 from langchain_openai import ChatOpenAI
@@ -16,6 +17,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
 from dotenv import load_dotenv
 from ai_tools.phi_filter import detect_and_redact_phi
+from ai_tools.prep_case import prep_triage_case, triage_metadata
 
 if os.path.exists("config.env"):
     load_dotenv("config.env")
@@ -85,6 +87,9 @@ Given this query: "{query}"
 Select the most relevant 3-5 keywords from this list:
 {keyword_list}
 
+Only choose keywords that are **clearly supported by the text**. Do not include keywords based on loose associations or general knowledge.  
+If a keyword seems possible but the text does not provide evidence, do NOT include it.
+
 Return the matching keywords as a JSON object with a single key "keywords" whose value is a list of strings.
 
 {format_instructions}
@@ -98,10 +103,18 @@ Return the matching keywords as a JSON object with a single key "keywords" whose
     })
     return output.keywords
 
+def build_semantic_query(case: dict) -> str:
+    complaints_list = [c["complaint"] for c in case.get("complaints", [])]
+    complaints = ", ".join(complaints_list)
+    notes = case.get("triage_notes", "")
+    return f"Complaints: {complaints}. Notes: {notes}"
+
 def hybrid_search_with_query_keywords(query, vstore, documents, keyword_list, llm, keyword_weights, top_k=3):
     semantic_hits_with_scores = vstore.similarity_search_with_score(query, k=top_k)
-    semantic_hits = [doc for doc, score in semantic_hits_with_scores if score >= 0.75]
-
+    semantic_hits = [doc for doc, score in semantic_hits_with_scores if score >= 0.65]
+    # print the names of the docs in the semantic hits
+    for doc in semantic_hits:
+        print(f"Semantic match: {doc.metadata.get('disease_name', 'Unknown Disease')}")
     matched_keywords = extract_keywords_with_gpt(query, llm, keyword_list)
 
     keyword_hits = [
@@ -113,19 +126,37 @@ def hybrid_search_with_query_keywords(query, vstore, documents, keyword_list, ll
     ranked_docs = sorted(scored_docs, key=lambda x: -x[1])
     top_docs = [doc for doc, score in ranked_docs if score > 1.5]
     top_3_docs = top_docs[:3]
+    # print the names of the docs in the top 3 keyword hits
+    for doc in top_3_docs:
+        print(f"Keyword match: {doc.metadata.get('disease_name', 'Unknown Disease')}")
 
     merged = {doc.page_content: doc for doc in semantic_hits + top_3_docs}
+    # print doc names
+    for doc in merged.values():
+        print(f"Matched document: {doc.metadata.get('disease_name', 'Unknown Disease')}")
     return list(merged.values())
 
 # -------------------------------
 # Core tool function
 # -------------------------------
-def idsr_check(query: str, llm=None, sitecode=None):
+def idsr_check(query, llm=None, sitecode=None):
     _lazy_load()
     llm = llm or _llm_langchain
 
+    if isinstance(query, dict):
+        query_dict = query
+    elif isinstance(query, str):
+        try:
+            query_dict = json.loads(query)
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Invalid JSON string: {e}\nInput was: {query[:100]}")
+    else:
+        raise TypeError(f"Query must be dict or JSON string, got {type(query)}")
+    query = prep_triage_case(query_dict, triage_metadata)
+    sem_query = build_semantic_query(query_dict)
+    print(sem_query)
     results = hybrid_search_with_query_keywords(
-        query, _vectorstore, _tagged_documents, _keywords, llm, _keyword_weights
+        sem_query, _vectorstore, _tagged_documents, _keywords, llm, _keyword_weights
     )
 
     # Location & epidemic info (SQLite)
@@ -162,24 +193,20 @@ def idsr_check(query: str, llm=None, sitecode=None):
     Role & Context
     You are a medical assistant analyzing a clinical case in Kenya. You have:
     
-    Disease definitions
-    County-level prevalence, seasonality, epidemic alerts, and rainy season status
+    Disease definitions, County-level prevalence, seasonality, epidemic alerts, and rainy season status
 
     Instructions
-    Compare the case to each disease definition, considering prevalence, seasonality, and epidemic alerts.
+    Compare the case to each disease definition, considering local prevalence, seasonality, and epidemic alerts.
 
     For each disease, classify as one of:
     - HIGH: strong alignment with the case and context
     - MEDIUM: possible but not strongly supported
     - LOW: unlikely
-    - NONE: does not match at all
 
-    Only include diseases that are HIGH or MEDIUM. If no diseases are HIGH or MEDIUM, return:
-    Possible Matches: NONE
-    Clarifying Questions: NONE
-    Recommendation: NONE
+    Only include diseases that are HIGH or MEDIUM. Do not include diseases that are LOW. If no diseases are HIGH or MEDIUM, return:
+    NONE
 
-    Keep reasoning to one concise line per plausible disease.
+    Keep reasoning to one concise line per HIGH and MEDIUM disease.
 
     Clarifying Questions: include 2-3 if there are plausible matches; otherwise output NONE.
     Recommendation: single line if there are plausible matches; otherwise NONE.
@@ -195,10 +222,11 @@ In {county_name}, the current rainy season status is {rainy_season}.
 County disease info: {county_info}
 Epidemic info: {epidemic_info}
 """
+
     llm_response = llm.invoke(prompt_text)
     answer_text = llm_response.content.strip() if llm_response else "No relevant disease information found."
 
-    no_relevant_matches = "Possible Matches: NONE" in answer_text
+    no_relevant_matches = "NONE" in answer_text
 
     return {
         "answer": answer_text,
@@ -212,8 +240,7 @@ Epidemic info: {epidemic_info}
 # -------------------------------
 def idsr_check_standalone(query: str, sitecode=None):
     _lazy_load()
-    query_redacted = detect_and_redact_phi(query)["redacted_text"]
-    return idsr_check(query_redacted, llm=_llm_langchain, sitecode=sitecode)
+    return idsr_check(query, llm=_llm_langchain, sitecode=sitecode)
 
 # -------------------------------
 # CLI testing

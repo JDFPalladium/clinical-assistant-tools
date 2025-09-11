@@ -34,7 +34,7 @@ def _lazy_load():
         _embedding_model = OpenAIEmbedding()
         _llm_llama = OpenAI(model="gpt-4o-mini", temperature=0.0)
         _reranker = LLMRerank(llm=_llm_llama, top_n=2)
-        _llm_langchain = ChatOpenAI(temperature=0.0, model="gpt-4o")
+        _llm_langchain = ChatOpenAI(temperature=0.0, model="gpt-5-mini")
         # Global retriever (load global index)
         global_index_path = "data/processed/lp/indices/Global"   # adjust to your real folder
         storage_context_arv = StorageContext.from_defaults(persist_dir=global_index_path)
