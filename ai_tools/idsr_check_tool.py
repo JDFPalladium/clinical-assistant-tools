@@ -17,7 +17,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
 from dotenv import load_dotenv
 from ai_tools.phi_filter import detect_and_redact_phi
-from ai_tools.prep_case import prep_triage_case, triage_metadata
+from ai_tools.prep_case import case_metadata, prep_case
 
 if os.path.exists("config.env"):
     load_dotenv("config.env")
@@ -152,9 +152,10 @@ def idsr_check(query, llm=None, sitecode=None):
             raise ValueError(f"Invalid JSON string: {e}\nInput was: {query[:100]}")
     else:
         raise TypeError(f"Query must be dict or JSON string, got {type(query)}")
-    query = prep_triage_case(query_dict, triage_metadata)
+
+    query = prep_case(query_dict, case_metadata)
     sem_query = build_semantic_query(query_dict)
-    print(sem_query)
+
     results = hybrid_search_with_query_keywords(
         sem_query, _vectorstore, _tagged_documents, _keywords, llm, _keyword_weights
     )
@@ -222,7 +223,7 @@ In {county_name}, the current rainy season status is {rainy_season}.
 County disease info: {county_info}
 Epidemic info: {epidemic_info}
 """
-
+    print(prompt_text)
     llm_response = llm.invoke(prompt_text)
     answer_text = llm_response.content.strip() if llm_response else "No relevant disease information found."
 
