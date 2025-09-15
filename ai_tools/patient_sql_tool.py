@@ -1,15 +1,19 @@
 # sql_tool.py
 import os
+import re
 import sqlite3
+import json
 import pandas as pd
 from functools import lru_cache
 from dotenv import load_dotenv
 from llama_index.core import StorageContext, load_index_from_storage
 from llama_index.core.retrievers import VectorIndexRetriever
 from langchain_openai import ChatOpenAI
+from langchain.prompts import ChatPromptTemplate, HumanMessagePromptTemplate
 
 from ai_tools.phi_filter import detect_and_redact_phi
 from ai_tools.helpers import describe_relative_date
+from ai_tools.schemas import table_descriptions
 
 # --- Load env vars ---
 if os.path.exists("config.env"):
@@ -20,18 +24,151 @@ os.environ.get("OPENAI_API_KEY")
 # ------------------------
 # Utilities
 # ------------------------
-def safe(val):
-    if pd.isnull(val) or val in ("", "NULL"):
-        return "missing"
-    return val
+def check_guideline_needed(question, llm=None):
+    """
+    Ask an LLM whether guideline context is likely needed for this question.
+    Returns True/False.
+    """
+    if llm is None:
+        llm = get_summarizer_llm()  # lightweight 3.5 turbo
+    
+    prompt = (
+        "You are a classifier that decides whether a clinical question requires consulting external clinical guidelines.\n\n"
+        "Rules:\n"
+        "- If the question is only about retrieving or summarizing patient-specific data (labs, visits, medications, demographics), answer NO.\n"
+        "- If the question is about interpretation, management, treatment recommendations, or what action to take based on results, answer YES.\n\n"
+        "Return only YES or NO. Do not include explanations.\n\n"
+        f"Question: {question}\n"
+        "Final answer (YES or NO):"
+    )
 
-def extract_year(date_str):
-    if pd.isnull(date_str) or date_str in ("", "NULL"):
-        return "missing"
-    try:
-        return pd.to_datetime(date_str).year
-    except (ValueError, TypeError):
-        return "invalid date"
+    response = llm.invoke(prompt).content.strip().lower()
+    return response.startswith("yes")
+
+def build_summarization_prompt(question, sources):
+    """
+    Build a prompt to summarize guideline documents relevant to a question.
+    
+    Args:
+        question (str): User question.
+        sources (list of str): Text of the retrieved guideline documents.
+    
+    Returns:
+        str: Prompt to send to the LLM.
+    """
+    prompt = (
+        "You are a clinical assistant helping a healthcare provider answer a question using HIV/AIDS guidelines.\n\n"
+        f"Question: {question}\n\n"
+        "Below are excerpts from guideline documents that may be relevant:\n\n"
+        f"{sources}\n\n"
+        "Please summarize the most important points from the guideline excerpts that are relevant to the question. "
+        "Focus on actionable clinical guidance, dosing, monitoring, and follow-up instructions. "
+        "Do not include irrelevant details. "
+        "Keep the summary concise, accurate, and suitable for clinical decision-making."
+    )
+    return prompt
+
+
+def safe_json_load(s):
+    """
+    Strip ```json``` or ``` ``` from LLM output, then parse JSON.
+    """
+    # Remove code fences and optional language hints
+    s = re.sub(r"```(?:json)?", "", s, flags=re.IGNORECASE).strip()
+    return json.loads(s)
+
+def build_table_selection_prompt():
+    human_template = """
+Question: "{question}"
+
+Here are the patient tables and their descriptions:
+{table_descriptions}
+
+Return only the exact table names needed to answer the question, in JSON format like:
+["Table Name 1", "Table Name 2"]
+
+Do not include columns, explanations, or anything else.
+"""
+    human_message = HumanMessagePromptTemplate.from_template(human_template)
+    prompt = ChatPromptTemplate.from_messages([human_message])
+    return prompt
+
+def get_relevant_tables(question, table_descriptions, llm=None):
+    prompt = build_table_selection_prompt()
+    # Format with actual values
+    messages = prompt.format_prompt(
+        question=question,
+        table_descriptions=json.dumps(table_descriptions, indent=2)
+    ).to_messages()
+
+    # Send to LLM
+    response = llm(messages)
+    tables = safe_json_load(response.content)
+
+    return tables
+
+def patient_data_to_text(patient_id, conn, table_mappings, tables_to_include=None):
+    """
+    Pull all available data for one patient across multiple tables,
+    filter/rename columns using the table_mappings, and return as text.
+
+    Args:
+        patient_id (str): The patient identifier to query.
+        conn: Database connection object (e.g., SQLAlchemy or sqlite3).
+        table_mappings (dict): Metadata dict with table and column mappings.
+    
+    Returns:
+        str: JSON string with patient data.
+    """
+
+    patient_dict = {}
+
+    if tables_to_include is not None:
+        table_mappings = {k: v for k, v in table_mappings.items() if k in tables_to_include}
+
+    for table_name, mapping in table_mappings.items():
+        columns = list(mapping["columns"].keys())
+        query = f"SELECT {', '.join(columns)} FROM {table_name} WHERE patient_id = ?"
+        df = pd.read_sql(query, conn, params=(patient_id,))
+
+        if df.empty:
+            continue  # skip tables with no rows
+
+        # Build rename mapping: {column_name: display_name}
+        rename_map = {col: col_info["display_name"] for col, col_info in mapping["columns"].items()}
+        df = df.rename(columns=rename_map)
+
+        # drop columns that are entirely null
+        df = df.dropna(axis=1, how="all")
+
+        for col in df.columns:
+            if "date" in col.lower():
+                df[col] = df[col].apply(lambda x: describe_relative_date(pd.to_datetime(x)) if pd.notnull(x) else x)
+
+        # convert to dict format
+        records = df.to_dict(orient="records")
+
+        # single row table → dict
+        display_name = mapping["display_name"]
+        if len(records) == 1:
+            patient_dict[display_name] = records[0]
+        else:
+            patient_dict[display_name] = records
+
+            # Convert patient_dict to compact text
+        lines = []
+        for table_name, content in patient_dict.items():
+            lines.append(f"{table_name}:")
+            if isinstance(content, dict):
+                for k, v in content.items():
+                    lines.append(f"  - {k}: {v}")
+            elif isinstance(content, list):
+                for record in content:
+                    record_lines = [f"{k}: {v}" for k, v in record.items()]
+                    lines.append("  - " + ", ".join(record_lines))
+            lines.append("")  # blank line between tables
+
+        return "\n".join(lines)
 
 
 # ------------------------
@@ -43,7 +180,7 @@ def get_summarizer_llm():
 
 @lru_cache()
 def get_main_llm():
-    return ChatOpenAI(model="gpt-4o-mini", temperature=0)
+    return ChatOpenAI(model="gpt-4o", temperature=0)
 
 @lru_cache()
 def get_rag_retriever():
@@ -54,144 +191,41 @@ def get_rag_retriever():
     global_index_path = "data/processed/lp/indices/Global"   # adjust to your real folder
     storage_context_arv = StorageContext.from_defaults(persist_dir=global_index_path)
     index_arv = load_index_from_storage(storage_context_arv)
-    retriever = VectorIndexRetriever(index=index_arv, similarity_top_k=3)
+    retriever = VectorIndexRetriever(index=index_arv, similarity_top_k=2)
     return retriever
 
 
 # ------------------------
 # Main function
 # ------------------------
-def sql_chain(query: str, llm, global_retriever, pk_hash: str) -> dict:
+def sql_chain(query: str, llm, pk_hash: str) -> dict:
     """
     Retrieves patient data from SQL and summarizes it along with RAG guideline context.
     """
     summarizer_llm = get_summarizer_llm()
-
-    # Retrieve guideline context
-    sources = global_retriever.retrieve(query)
-    summarization_prompt = (
-        "You're a clinical assistant helping a provider answer a question using HIV/AIDS guidelines.\n\n"
-        f"Question: {query}\n\n"
-        "Provide a detailed summary of the most relevant points to the user question from the following source texts.\n\n"
-        f"{sources}"
-    )
-    guidelines_summary = summarizer_llm.invoke(summarization_prompt).content
-
+    
     if not pk_hash:
         raise ValueError("pk_hash is required in state for SQL queries.")
 
-    conn = sqlite3.connect("data/processed/patient_demonstration.sqlite")
-    cursor = conn.cursor()
+    conn = sqlite3.connect("data/processed/site_database.sqlite")
+    table_mappings = json.load(open("data/processed/table_mappings.json"))
 
-    # --- Visits ---
-    cursor.execute("SELECT * FROM clinical_visits WHERE PatientPKHash = :pk_hash", {"pk_hash": pk_hash})
-    visits_data = pd.DataFrame(cursor.fetchall(), columns=[c[0] for c in cursor.description])
+    relevant_tables = get_relevant_tables(query, table_descriptions, llm) 
+    filtered_tables = {k: v for k, v in table_descriptions.items() if k in relevant_tables}
+    patient_json = patient_data_to_text(pk_hash, conn, table_mappings, tables_to_include=filtered_tables)
 
-    def summarize_visits(df):
-        if df.empty:
-            return "No clinical visit data available."
-        df = df.copy()
-        df["VisitDate"] = pd.to_datetime(df["VisitDate"], errors="coerce")
-        df["NextAppointmentDate"] = pd.to_datetime(df["NextAppointmentDate"], errors="coerce")
+    # Decide whether guidelines are needed
+    use_guidelines = check_guideline_needed(query)
+    print(f"Use guidelines: {use_guidelines}")
 
-        summaries = []
-        ordinal_map = {1: "First", 2: "Second", 3: "Third"}
-        for idx, (_, row) in enumerate(df.sort_values("VisitDate", ascending=False).head(3).iterrows(), start=1):
-            ordinal = ordinal_map.get(idx, f"{idx}th")
-            summaries.append(
-                f"{ordinal} most recent clinical visit, {describe_relative_date(row['VisitDate'])}: "
-                f"WHO Stage {safe(row['WHOStage'])}, Weight {safe(row['Weight'])}kg, "
-                f"NextAppointmentDate {describe_relative_date(safe(row['NextAppointmentDate']))}, "
-                f"VisitType {safe(row['VisitType'])}, VisitBy {safe(row['VisitBy'])}, "
-                f"Pregnant {safe(row['Pregnant'])}, Breastfeeding {safe(row['Breastfeeding'])}, "
-                f"StabilityAssessment {safe(row['StabilityAssessment'])}, DifferentiatedCare {safe(row['DifferentiatedCare'])}, "
-                f"Height {safe(row['Height'])}cm, Adherence {safe(row['Adherence'])}, BP {safe(row['BP'])}, "
-                f"OI {safe(row['OI'])}, CurrentRegimen {safe(row['CurrentRegimen'])}"
-            )
-        return "\n".join(summaries)
-
-    visits_summary = summarize_visits(visits_data)
-
-    # --- Pharmacy ---
-    cursor.execute("SELECT * FROM pharmacy WHERE PatientPKHash = :pk_hash", {"pk_hash": pk_hash})
-    pharmacy_data = pd.DataFrame(cursor.fetchall(), columns=[c[0] for c in cursor.description])
-
-    def summarize_pharmacy(df):
-        if df.empty:
-            return "No pharmacy data available."
-        df = df.copy()
-        df["DispenseDate"] = pd.to_datetime(df["DispenseDate"], errors="coerce")
-        df["ExpectedReturn"] = pd.to_datetime(df["ExpectedReturn"], errors="coerce")
-
-        summaries = []
-        ordinal_map = {1: "First", 2: "Second", 3: "Third"}
-        for idx, (_, row) in enumerate(df.sort_values("DispenseDate", ascending=False).head(3).iterrows(), start=1):
-            ordinal = ordinal_map.get(idx, f"{idx}th")
-            summaries.append(
-                f"{ordinal} most recent pharmacy visit, {describe_relative_date(row['DispenseDate'])}, "
-                f"ExpectedReturn {describe_relative_date(row['ExpectedReturn'])}, Drug {safe(row['Drug'])}, "
-                f"Duration {safe(row['Duration'])}, TreatmentType {safe(row['TreatmentType'])}, "
-                f"RegimenLine {safe(row['RegimenLine'])}, "
-                f"RegimenChangedSwitched {safe(row['RegimenChangedSwitched'])}, "
-                f"RegimenChangeSwitchedReason {safe(row['RegimenChangeSwitchedReason'])}"
-            )
-        return "\n".join(summaries)
-
-    pharmacy_summary = summarize_pharmacy(pharmacy_data)
-
-    # --- Lab ---
-    cursor.execute("SELECT * FROM lab WHERE PatientPKHash = :pk_hash", {"pk_hash": pk_hash})
-    lab_data = pd.DataFrame(cursor.fetchall(), columns=[c[0] for c in cursor.description])
-
-    def summarize_lab(df):
-        if df.empty:
-            return "No lab data available."
-        df = df.copy()
-        df["OrderedbyDate"] = pd.to_datetime(df["OrderedbyDate"], errors="coerce")
-
-        summaries = []
-        ordinal_map = {1: "First", 2: "Second", 3: "Third"}
-        for idx, (_, row) in enumerate(df.sort_values("OrderedbyDate", ascending=False).head(3).iterrows(), start=1):
-            summaries.append(
-                f"{ordinal_map.get(idx, idx)} most recent lab test, {describe_relative_date(row['OrderedbyDate'])}. "
-                f"TestName {safe(row['TestName'])}, TestResult {safe(row['TestResult'])}"
-            )
-        return "\n".join(summaries)
-
-    lab_summary = summarize_lab(lab_data)
-
-    # --- Demographics ---
-    cursor.execute("SELECT * FROM demographics WHERE PatientPKHash = :pk_hash", {"pk_hash": pk_hash})
-    demographic_data = pd.DataFrame(cursor.fetchall(), columns=[c[0] for c in cursor.description])
-
-    def summarize_demographics(df):
-        if df.empty:
-            return "No demographic data available."
-
-        def calculate_age(dob):
-            if pd.isnull(dob) or dob in ("", "NULL"):
-                return "missing"
-            try:
-                dob = pd.to_datetime(dob)
-                today = pd.to_datetime("today")
-                return today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
-            except (ValueError, TypeError):
-                return "invalid date"
-
-        row = df.iloc[0]
-        return (
-            f"Sex: {safe(row['Sex'])}\n"
-            f"MaritalStatus: {safe(row['MaritalStatus'])}\n"
-            f"EducationLevel: {safe(row['EducationLevel'])}\n"
-            f"Occupation: {safe(row['Occupation'])}\n"
-            f"OnIPT: {safe(row['OnIPT'])}\n"
-            f"ARTOutcomeDescription: {safe(row['ARTOutcomeDescription'])}\n"
-            f"StartARTDate: {describe_relative_date(pd.to_datetime(row['StartARTDate'], errors='coerce'))}\n"
-            f"Age: {calculate_age(safe(row['DOB']))}"
-        )
-
-    demographic_summary = summarize_demographics(demographic_data)
-    conn.close()
+    # Only invoke RAG if needed
+    if use_guidelines:
+        retriever = get_rag_retriever()
+        sources = retriever.retrieve(query)
+        summarization_prompt = build_summarization_prompt(query, sources)
+        guidelines_summary = summarizer_llm.invoke(summarization_prompt).content
+    else:
+        guidelines_summary = None
 
     # --- Final prompt ---
     prompt = (
@@ -201,12 +235,9 @@ def sql_chain(query: str, llm, global_retriever, pk_hash: str) -> dict:
         "If essential patient information is missing, explain what is missing instead of guessing.\n\n"
         f"Question: {query}\n\n"
         f"Guideline Context: {guidelines_summary}\n\n"
-        f"Clinical Visits Summary:\n{visits_summary}\n\n"
-        f"Pharmacy Summary:\n{pharmacy_summary}\n\n"
-        f"Lab Summary:\n{lab_summary}\n\n"
-        f"Demographic Summary:\n{demographic_summary}\n"
+        f"Patient Data (JSON):\n{patient_json}\n\n"
     )
-
+    print(prompt)
     response = llm.invoke(prompt)
     return {"answer": response.content, "last_tool": "sql_chain"}
 
@@ -216,9 +247,8 @@ def sql_chain(query: str, llm, global_retriever, pk_hash: str) -> dict:
 # ------------------------
 def run_sql_standalone(query: str, pk_hash: str):
     llm = get_main_llm()
-    retriever = get_rag_retriever()
     query_redacted = detect_and_redact_phi(query)["redacted_text"]
-    return sql_chain(query=query_redacted, llm=llm, global_retriever=retriever, pk_hash=pk_hash)
+    return sql_chain(query=query_redacted, llm=llm, pk_hash=pk_hash)
 
 
 # ------------------------
