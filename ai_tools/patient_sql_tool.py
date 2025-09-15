@@ -128,7 +128,8 @@ def patient_data_to_text(patient_id, conn, table_mappings, tables_to_include=Non
 
     for table_name, mapping in table_mappings.items():
         columns = list(mapping["columns"].keys())
-        query = f"SELECT {', '.join(columns)} FROM {table_name} WHERE patient_id = ?"
+        # take top 3 rows only to limit size
+        query = f"SELECT {', '.join(columns)} FROM {table_name} WHERE patient_id = ? LIMIT 3"
         df = pd.read_sql(query, conn, params=(patient_id,))
 
         if df.empty:
@@ -198,7 +199,7 @@ def get_rag_retriever():
 # ------------------------
 # Main function
 # ------------------------
-def sql_chain(query: str, llm, pk_hash: str) -> dict:
+def sql_chain(query: str, llm, pk_hash: str, search_guidelines = False, filter_tables = False) -> dict:
     """
     Retrieves patient data from SQL and summarizes it along with RAG guideline context.
     """
@@ -210,13 +211,21 @@ def sql_chain(query: str, llm, pk_hash: str) -> dict:
     conn = sqlite3.connect("data/processed/site_database.sqlite")
     table_mappings = json.load(open("data/processed/table_mappings.json"))
 
-    relevant_tables = get_relevant_tables(query, table_descriptions, llm) 
-    filtered_tables = {k: v for k, v in table_descriptions.items() if k in relevant_tables}
+    # if filter_tables is True, the use LLM to select relevant tables
+    if filter_tables:
+        relevant_tables = get_relevant_tables(query, table_descriptions, llm) 
+        filtered_tables = {k: v for k, v in table_descriptions.items() if k in relevant_tables}
+    else:
+        filtered_tables = table_descriptions
+
     patient_json = patient_data_to_text(pk_hash, conn, table_mappings, tables_to_include=filtered_tables)
 
-    # Decide whether guidelines are needed
-    use_guidelines = check_guideline_needed(query)
-    print(f"Use guidelines: {use_guidelines}")
+    # if search_guidelines if True, then do RAG
+    use_guidelines = False
+    if search_guidelines:
+        # Decide whether guidelines are needed
+        use_guidelines = check_guideline_needed(query)
+        print(f"Use guidelines: {use_guidelines}")
 
     # Only invoke RAG if needed
     if use_guidelines:
@@ -237,7 +246,7 @@ def sql_chain(query: str, llm, pk_hash: str) -> dict:
         f"Guideline Context: {guidelines_summary}\n\n"
         f"Patient Data (JSON):\n{patient_json}\n\n"
     )
-    print(prompt)
+
     response = llm.invoke(prompt)
     return {"answer": response.content, "last_tool": "sql_chain"}
 
@@ -245,10 +254,14 @@ def sql_chain(query: str, llm, pk_hash: str) -> dict:
 # ------------------------
 # Standalone wrapper
 # ------------------------
-def run_sql_standalone(query: str, pk_hash: str):
+def run_sql_standalone(query: str, pk_hash: str, search_guidelines=True, filter_tables = False) -> dict:
     llm = get_main_llm()
     query_redacted = detect_and_redact_phi(query)["redacted_text"]
-    return sql_chain(query=query_redacted, llm=llm, pk_hash=pk_hash)
+    return sql_chain(query=query_redacted,
+                      llm=llm, 
+                      pk_hash=pk_hash, 
+                      search_guidelines=search_guidelines,
+                      filter_tables=filter_tables)
 
 
 # ------------------------
@@ -257,6 +270,8 @@ def run_sql_standalone(query: str, pk_hash: str):
 if __name__ == "__main__":
     q = input("Enter your query: ")
     pk = input("Enter your patient PK hash: ")
-    result = run_sql_standalone(q, pk)
+    sg = input("Search guidelines? (y/n): ").strip().lower() == 'y'
+    ft = input("Filter tables? (y/n): ").strip().lower() == 'y'
+    result = run_sql_standalone(q, pk, search_guidelines=sg, filter_tables=ft)
     print("\n--- SQL Tool Result ---")
     print(result["answer"])
