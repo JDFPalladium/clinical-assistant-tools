@@ -26,7 +26,7 @@ _llm_llama = None
 _llm_langchain = None
 _global_retriever = None
 
-def _lazy_load():
+def _lazy_load(hybrid=True):
     global _embeddings, _df, _embedding_model, _reranker, _llm_llama, _llm_langchain, _global_retriever
     if _embeddings is None:
         _embeddings = np.load("data/processed/lp/summary_embeddings/embeddings.npy")
@@ -34,9 +34,10 @@ def _lazy_load():
         _embedding_model = OpenAIEmbedding()
         _llm_llama = OpenAI(model="gpt-4o-mini", temperature=0.0)
         _reranker = LLMRerank(llm=_llm_llama, top_n=2)
-        _llm_langchain = ChatOpenAI(temperature=0.0, model="gpt-5-mini")
-        # Global retriever (load global index)
-        global_index_path = "data/processed/lp/indices/Global"   # adjust to your real folder
+        _llm_langchain = ChatOpenAI(temperature=0.0, model="gpt-4o-mini")
+
+    if hybrid and _global_retriever is None:
+        global_index_path = "data/processed/lp/indices/Global"   # adjust path
         storage_context_arv = StorageContext.from_defaults(persist_dir=global_index_path)
         index_arv = load_index_from_storage(storage_context_arv)
         _global_retriever = VectorIndexRetriever(index=index_arv, similarity_top_k=3)
@@ -44,11 +45,11 @@ def _lazy_load():
 # -------------------------------
 # Core RAG retrieve function
 # -------------------------------
-def rag_retrieve(query: str, llm= None, global_retriever = None, embeddings=None, df=None, embedding_model=None, reranker=None):
+def rag_retrieve(query: str, llm= None, global_retriever = None, embeddings=None, df=None, embedding_model=None, reranker=None, hybrid=True) -> dict:
     """Perform RAG search, using passed resources or defaults if standalone."""
     # fallback to lazy-loaded objects if arguments not provided
-    if embeddings is None or df is None or embedding_model is None or reranker is None:
-        _lazy_load()
+    if embeddings is None or df is None or embedding_model is None or reranker is None or (hybrid and global_retriever is None):
+        _lazy_load(hybrid=hybrid)
         llm = llm or _llm_langchain
         global_retriever = global_retriever or _global_retriever
         embeddings = _embeddings
@@ -71,8 +72,9 @@ def rag_retrieve(query: str, llm= None, global_retriever = None, embeddings=None
         raw_retriever = VectorIndexRetriever(index=index, similarity_top_k=3)
         all_sources.extend(raw_retriever.retrieve(expanded_query))
 
-    sources_arv = global_retriever.retrieve(expanded_query)
-    all_sources.extend(sources_arv)
+    if hybrid:
+        sources_arv = global_retriever.retrieve(expanded_query)
+        all_sources.extend(sources_arv)
 
     # Deduplicate by node_id
     unique_sources = {}
@@ -106,20 +108,19 @@ def rag_retrieve(query: str, llm= None, global_retriever = None, embeddings=None
 # -------------------------------
 # Standalone wrapper
 # -------------------------------
-def rag_retrieve_standalone(query: str):
+def rag_retrieve_standalone(query: str, hybrid=True) -> dict:
     """Run RAG tool independently, without needing external retriever or llm."""
-    _lazy_load()
+    _lazy_load(hybrid=hybrid)
 
     # Dummy retriever that returns nothing (so only local vectors are used)
     class DummyRetriever:
         def retrieve(self, query):
             return []
 
-    dummy_retriever = DummyRetriever()
     llm = _llm_langchain  # already created in _lazy_load
     query_redacted = detect_and_redact_phi(query)["redacted_text"]
-    print(query_redacted)
-    return rag_retrieve(query_redacted, llm, dummy_retriever)
+    retriever = _global_retriever if hybrid else DummyRetriever()
+    return rag_retrieve(query_redacted, llm, retriever, hybrid=hybrid)
 
 
 # -------------------------------
@@ -127,7 +128,8 @@ def rag_retrieve_standalone(query: str):
 # -------------------------------
 if __name__ == "__main__":
     q = input("Enter your query: ")
-    result = rag_retrieve_standalone(q)
+    h = input("Use hybrid retrieval? (y/n): ").strip().lower() == 'y'
+    result = rag_retrieve_standalone(q, hybrid=h)
     print("\n=== Answer ===")
     print(result["answer"])
 
