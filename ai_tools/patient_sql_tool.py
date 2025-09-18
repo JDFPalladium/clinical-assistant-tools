@@ -107,7 +107,18 @@ def get_relevant_tables(question, table_descriptions, llm=None):
 
     return tables
 
-def patient_data_to_text(patient_id, conn, table_mappings, tables_to_include=None):
+def build_decoder_dict(decoder_csv):
+    """
+    Convert decoder CSV into nested dict for fast lookup:
+    { (table, column): { code: decoded_value } }
+    """
+    decoder_df = pd.read_csv(decoder_csv)
+    decoder_map = {}
+    for (table, col), group in decoder_df.groupby(["table_name", "column_name"]):
+        decoder_map[(table, col)] = dict(zip(group["code"], group["value"]))
+    return decoder_map
+
+def patient_data_to_text(patient_id, conn, table_mappings, decoder, tables_to_include=None):
     """
     Pull all available data for one patient across multiple tables,
     filter/rename columns using the table_mappings, and return as text.
@@ -120,7 +131,7 @@ def patient_data_to_text(patient_id, conn, table_mappings, tables_to_include=Non
     Returns:
         str: JSON string with patient data.
     """
-
+    print(decoder)
     patient_dict = {}
 
     if tables_to_include is not None:
@@ -134,6 +145,23 @@ def patient_data_to_text(patient_id, conn, table_mappings, tables_to_include=Non
 
         if df.empty:
             continue  # skip tables with no rows
+
+        # Decode coded values safely
+        for col in df.columns:
+            key = (table_name, col)
+            if key in decoder:
+                def safe_decode(x):
+                    if pd.isna(x):
+                        return x
+
+                    # Convert float that is an integer (e.g., 165610.0) to int
+                    if isinstance(x, float) and x.is_integer():
+                        x = int(x)
+
+                    # Look up in decoder using string key
+                    return decoder.get(key, {}).get(str(x), x)
+
+                df[col] = df[col].apply(safe_decode)
 
         # Build rename mapping: {column_name: display_name}
         rename_map = {col: col_info["display_name"] for col, col_info in mapping["columns"].items()}
@@ -156,20 +184,20 @@ def patient_data_to_text(patient_id, conn, table_mappings, tables_to_include=Non
         else:
             patient_dict[display_name] = records
 
-            # Convert patient_dict to compact text
-        lines = []
-        for table_name, content in patient_dict.items():
-            lines.append(f"{table_name}:")
-            if isinstance(content, dict):
-                for k, v in content.items():
-                    lines.append(f"  - {k}: {v}")
-            elif isinstance(content, list):
-                for record in content:
-                    record_lines = [f"{k}: {v}" for k, v in record.items()]
-                    lines.append("  - " + ", ".join(record_lines))
-            lines.append("")  # blank line between tables
+    # Convert patient_dict to compact text
+    lines = []
+    for table_name, content in patient_dict.items():
+        lines.append(f"{table_name}:")
+        if isinstance(content, dict):
+            for k, v in content.items():
+                lines.append(f"  - {k}: {v}")
+        elif isinstance(content, list):
+            for record in content:
+                record_lines = [f"{k}: {v}" for k, v in record.items()]
+                lines.append("  - " + ", ".join(record_lines))
+        lines.append("")  # blank line between tables
 
-        return "\n".join(lines)
+    return "\n".join(lines)
 
 
 # ------------------------
@@ -210,6 +238,7 @@ def sql_chain(query: str, llm, pk_hash: str, search_guidelines = False, filter_t
 
     conn = sqlite3.connect("data/processed/site_database.sqlite")
     table_mappings = json.load(open("data/processed/table_mappings.json"))
+    decoder = build_decoder_dict("data/processed/Site tables decoding map.csv")
 
     # if filter_tables is True, the use LLM to select relevant tables
     if filter_tables:
@@ -218,7 +247,7 @@ def sql_chain(query: str, llm, pk_hash: str, search_guidelines = False, filter_t
     else:
         filtered_tables = table_descriptions
 
-    patient_json = patient_data_to_text(pk_hash, conn, table_mappings, tables_to_include=filtered_tables)
+    patient_json = patient_data_to_text(pk_hash, conn, table_mappings, decoder, tables_to_include=filtered_tables)
 
     # if search_guidelines if True, then do RAG
     use_guidelines = False
@@ -235,6 +264,8 @@ def sql_chain(query: str, llm, pk_hash: str, search_guidelines = False, filter_t
         guidelines_summary = summarizer_llm.invoke(summarization_prompt).content
     else:
         guidelines_summary = None
+
+    print(patient_json)
 
     # --- Final prompt ---
     prompt = (
