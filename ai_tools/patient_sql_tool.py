@@ -12,8 +12,8 @@ from langchain_openai import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate, HumanMessagePromptTemplate
 
 from ai_tools.phi_filter import detect_and_redact_phi
-from ai_tools.helpers import describe_relative_date
-from ai_tools.schemas import table_descriptions
+from ai_tools.schemas import table_descriptions 
+from ai_tools.patient_tool_helpers import patient_data_to_text, build_decoder_dict
 
 # --- Load env vars ---
 if os.path.exists("config.env"):
@@ -107,98 +107,6 @@ def get_relevant_tables(question, table_descriptions, llm=None):
 
     return tables
 
-def build_decoder_dict(decoder_csv):
-    """
-    Convert decoder CSV into nested dict for fast lookup:
-    { (table, column): { code: decoded_value } }
-    """
-    decoder_df = pd.read_csv(decoder_csv)
-    decoder_map = {}
-    for (table, col), group in decoder_df.groupby(["table_name", "column_name"]):
-        decoder_map[(table, col)] = dict(zip(group["code"], group["value"]))
-    return decoder_map
-
-def patient_data_to_text(patient_id, conn, table_mappings, decoder, tables_to_include=None):
-    """
-    Pull all available data for one patient across multiple tables,
-    filter/rename columns using the table_mappings, and return as text.
-
-    Args:
-        patient_id (str): The patient identifier to query.
-        conn: Database connection object (e.g., SQLAlchemy or sqlite3).
-        table_mappings (dict): Metadata dict with table and column mappings.
-    
-    Returns:
-        str: JSON string with patient data.
-    """
-    print(decoder)
-    patient_dict = {}
-
-    if tables_to_include is not None:
-        table_mappings = {k: v for k, v in table_mappings.items() if k in tables_to_include}
-
-    for table_name, mapping in table_mappings.items():
-        columns = list(mapping["columns"].keys())
-        # take top 3 rows only to limit size
-        query = f"SELECT {', '.join(columns)} FROM {table_name} WHERE patient_id = ? LIMIT 3"
-        df = pd.read_sql(query, conn, params=(patient_id,))
-
-        if df.empty:
-            continue  # skip tables with no rows
-
-        # Decode coded values safely
-        for col in df.columns:
-            key = (table_name, col)
-            if key in decoder:
-                def safe_decode(x):
-                    if pd.isna(x):
-                        return x
-
-                    # Convert float that is an integer (e.g., 165610.0) to int
-                    if isinstance(x, float) and x.is_integer():
-                        x = int(x)
-
-                    # Look up in decoder using string key
-                    return decoder.get(key, {}).get(str(x), x)
-
-                df[col] = df[col].apply(safe_decode)
-
-        # Build rename mapping: {column_name: display_name}
-        rename_map = {col: col_info["display_name"] for col, col_info in mapping["columns"].items()}
-        df = df.rename(columns=rename_map)
-
-        # drop columns that are entirely null
-        df = df.dropna(axis=1, how="all")
-
-        for col in df.columns:
-            if "date" in col.lower():
-                df[col] = df[col].apply(lambda x: describe_relative_date(pd.to_datetime(x)) if pd.notnull(x) else x)
-
-        # convert to dict format
-        records = df.to_dict(orient="records")
-
-        # single row table → dict
-        display_name = mapping["display_name"]
-        if len(records) == 1:
-            patient_dict[display_name] = records[0]
-        else:
-            patient_dict[display_name] = records
-
-    # Convert patient_dict to compact text
-    lines = []
-    for table_name, content in patient_dict.items():
-        lines.append(f"{table_name}:")
-        if isinstance(content, dict):
-            for k, v in content.items():
-                lines.append(f"  - {k}: {v}")
-        elif isinstance(content, list):
-            for record in content:
-                record_lines = [f"{k}: {v}" for k, v in record.items()]
-                lines.append("  - " + ", ".join(record_lines))
-        lines.append("")  # blank line between tables
-
-    return "\n".join(lines)
-
 
 # ------------------------
 # Lazy loaders
@@ -247,7 +155,7 @@ def sql_chain(query: str, llm, pk_hash: str, search_guidelines = False, filter_t
     else:
         filtered_tables = table_descriptions
 
-    patient_json = patient_data_to_text(pk_hash, conn, table_mappings, decoder, tables_to_include=filtered_tables)
+    patient_data = patient_data_to_text(pk_hash, conn, table_mappings, decoder, tables_to_include=filtered_tables)
 
     # if search_guidelines if True, then do RAG
     use_guidelines = False
@@ -265,7 +173,7 @@ def sql_chain(query: str, llm, pk_hash: str, search_guidelines = False, filter_t
     else:
         guidelines_summary = None
 
-    print(patient_json)
+    print(patient_data)
 
     # --- Final prompt ---
     prompt = (
@@ -273,9 +181,10 @@ def sql_chain(query: str, llm, pk_hash: str, search_guidelines = False, filter_t
         "and summarized patient data below, answer the question accurately and concisely. "
         "Only use the provided data; do not guess or hallucinate. "
         "If essential patient information is missing, explain what is missing instead of guessing.\n\n"
+        "Provide a bullet-point summary with no more than 5 bullets.\n\n"
         f"Question: {query}\n\n"
         f"Guideline Context: {guidelines_summary}\n\n"
-        f"Patient Data (JSON):\n{patient_json}\n\n"
+        f"Patient Data:\n{patient_data}\n\n"
     )
 
     response = llm.invoke(prompt)

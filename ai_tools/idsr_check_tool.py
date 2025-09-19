@@ -16,8 +16,9 @@ from langchain_core.documents import Document
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
 from dotenv import load_dotenv
-from ai_tools.phi_filter import detect_and_redact_phi
-from ai_tools.prep_case import case_metadata, prep_case
+# from ai_tools.phi_filter import detect_and_redact_phi
+from ai_tools.prep_case import prep_case
+from ai_tools.schemas import case_metadata
 
 if os.path.exists("config.env"):
     load_dotenv("config.env")
