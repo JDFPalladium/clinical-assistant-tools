@@ -205,10 +205,10 @@ def idsr_check(query, llm=None, sitecode=None):
     - MEDIUM: possible but not strongly supported
     - LOW: unlikely
 
-    Only include diseases that are HIGH or MEDIUM. Do not include diseases that are LOW. If no diseases are HIGH or MEDIUM, return:
+    Only include diseases that are HIGH. Do not include diseases that are MEDIUM or LOW. If no diseases are HIGH, return:
     NONE
 
-    Keep reasoning to one concise line per HIGH and MEDIUM disease.
+    Keep reasoning to one concise line per HIGH disease.
 
     Clarifying Questions: include 2-3 if there are plausible matches; otherwise output NONE.
     Recommendation: single line if there are plausible matches; otherwise NONE.

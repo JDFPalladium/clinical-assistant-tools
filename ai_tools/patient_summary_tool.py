@@ -65,12 +65,28 @@ def patient_summary(llm, pk_hash: str) -> dict:
     Output as a bullet list: • [Theme] – [Insight] (≤2 lines, actionable).
 
     1. **Medication & Treatment**
+
+    Items of concern include:
+    - Any history of adverse drug reactions
+    - Medication non-adherence and challenges with adherence
+    - History of missed appointments
+    - Any history of treatment failure, regimen changes, or drug resistance
+
     {topic_dict.get("Medication & Treatment", [])}
 
     2. **Laboratory & Diagnostics**
+
+    Items of concern include:
+    - Any history of HIV viral non-suppression, low CD4 counts, or other abnormal lab results
+
     {topic_dict.get("Laboratory & Diagnostics", [])}
 
     3. **Clinical Events**
+    
+    Items of concern include:
+    - Any history of complaints and diagnoses
+    - Any history of hospitalizations, surgeries, or other significant clinical events
+
     {topic_dict.get("Clinical Events & Patient care", [])}
 
     4. **Psychosocial & Behavioral Risks**
