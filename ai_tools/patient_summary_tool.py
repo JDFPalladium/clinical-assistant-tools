@@ -53,24 +53,36 @@ def patient_summary(llm, pk_hash: str) -> dict:
     decoder = build_decoder_dict("data/processed/Site tables decoding map.csv")
 
 
-    patient_data = patient_data_to_text(pk_hash, conn, table_mappings, decoder)
+    _, topic_dict = patient_data_to_text(pk_hash, conn, table_mappings, decoder)
 
-    print(patient_data)
 
     # --- Final prompt ---
-    prompt = (
-        "You are a clinical assistant reviewing structured patient data. "
-        "Identify only **clinical concerns** requiring follow-up or action (exclude routine facts). "
-        "Output as a bullet list: `• [Theme] – [Insight]` (≤2 lines, actionable). "
-        "Flag if present: "
-        "- Medication issues (missed doses, poor adherence, regimen changes, side effects, resistance). "
-        "- Labs/diagnostics (unsuppressed VL, abnormal results, TB findings). "
-        "- Clinical events (urgent orders, hospitalizations, missed appointments and defaults). "
-        "- Psychosocial risks (depression, substance use, stigma, social isolation, alternative treatments). "
-        "- Reproductive health (pregnancy, family planning gaps). "
-        "If no issues, return: `• No clinical concerns identified.` "
-        f"Patient Data:\n{patient_data}\n\n"
-    )
+    prompt = f"""
+    You are a clinical assistant reviewing structured patient data.
+    Your task is to summarize only clinical concerns requiring follow-up or action 
+    (exclude routine facts).
+
+    Output as a bullet list: • [Theme] – [Insight] (≤2 lines, actionable).
+
+    1. **Medication & Treatment**
+    {topic_dict.get("Medication & Treatment", [])}
+
+    2. **Laboratory & Diagnostics**
+    {topic_dict.get("Laboratory & Diagnostics", [])}
+
+    3. **Clinical Events**
+    {topic_dict.get("Clinical Events & Patient care", [])}
+
+    4. **Psychosocial & Behavioral Risks**
+    {topic_dict.get("Psychosocial & Behavioral Risks", [])}
+
+    5. **Reproductive & Sexual Health**
+    {topic_dict.get("Reproductive & Sexual Health", [])}
+
+    If no issues, return: 
+    • No clinical concerns identified.
+    """
+    print(prompt)
 
     response = llm.invoke(prompt)
     return {"answer": response.content}

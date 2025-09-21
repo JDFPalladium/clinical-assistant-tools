@@ -27,6 +27,7 @@ def patient_data_to_text(patient_id, conn, table_mappings, decoder, tables_to_in
     """
  
     patient_dict = {}
+    topic_dict = {}
 
     # if tables_to_include is given, filter table_mappings to the tables selected by LLM for relevance
     if tables_to_include is not None:
@@ -80,6 +81,16 @@ def patient_data_to_text(patient_id, conn, table_mappings, decoder, tables_to_in
         else:
             patient_dict[display_name] = records
 
+        # --- NEW: group by column topic ---
+        for col, col_info in mapping["columns"].items():
+            topic = col_info.get("topic", "Other")
+            display_name = col_info["display_name"]
+            if display_name in df.columns:
+                values = df[display_name].dropna().tolist()
+                for v in values:
+                    topic_dict.setdefault(topic, []).append(f"{display_name}: {v}")
+
+
     # Convert patient_dict to compact text
     lines = []
     for table_name, content in patient_dict.items():
@@ -93,4 +104,6 @@ def patient_data_to_text(patient_id, conn, table_mappings, decoder, tables_to_in
                 lines.append("  - " + ", ".join(record_lines))
         lines.append("")  # blank line between tables
 
-    return "\n".join(lines)
+    compact_text = "\n".join(lines)
+
+    return compact_text, topic_dict
