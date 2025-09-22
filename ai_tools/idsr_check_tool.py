@@ -111,11 +111,14 @@ def build_semantic_query(case: dict) -> str:
     return f"Complaints: {complaints}. Notes: {notes}"
 
 def hybrid_search_with_query_keywords(query, vstore, documents, keyword_list, llm, keyword_weights, top_k=3):
+    # Semantic search
     semantic_hits_with_scores = vstore.similarity_search_with_score(query, k=top_k)
-    semantic_hits = [doc for doc, score in semantic_hits_with_scores if score >= 0.65]
+    semantic_hits = [doc for doc, score in semantic_hits_with_scores if score >= 0.0]
     # print the names of the docs in the semantic hits
     for doc in semantic_hits:
         print(f"Semantic match: {doc.metadata.get('disease_name', 'Unknown Disease')}")
+
+    # Keyword extraction & matching
     matched_keywords = extract_keywords_with_gpt(query, llm, keyword_list)
 
     keyword_hits = [
@@ -125,7 +128,7 @@ def hybrid_search_with_query_keywords(query, vstore, documents, keyword_list, ll
 
     scored_docs = [(doc, score_doc(doc, matched_keywords, keyword_weights)) for doc in keyword_hits]
     ranked_docs = sorted(scored_docs, key=lambda x: -x[1])
-    top_docs = [doc for doc, score in ranked_docs if score > 1.5]
+    top_docs = [doc for doc, score in ranked_docs if score > -1]
     top_3_docs = top_docs[:3]
     # print the names of the docs in the top 3 keyword hits
     for doc in top_3_docs:
@@ -192,26 +195,36 @@ def idsr_check(query, llm=None, sitecode=None):
         for doc in results
     ])
     prompt_text = f"""
-    Role & Context
+    Role & Context:
+
     You are a medical assistant analyzing a clinical case in Kenya. You have:
     
-    Disease definitions, County-level prevalence, seasonality, epidemic alerts, and rainy season status
+    Disease definitions, County-level prevalence, epidemic alerts, and rainy season status
 
-    Instructions
-    Compare the case to each disease definition, considering local prevalence, seasonality, and epidemic alerts.
+    Instructions:
 
-    For each disease, classify as one of:
-    - HIGH: strong alignment with the case and context
-    - MEDIUM: possible but not strongly supported
-    - LOW: unlikely
+    Evaluate each disease independently, without comparing to other diseases.
 
-    Only include diseases that are HIGH. Do not include diseases that are MEDIUM or LOW. If no diseases are HIGH, return:
-    NONE
+    For each disease,
+    Decide Flag = YES if:
+    - The case substantially matches the suspected case definition, even if some details are missing or phrased differently, AND
+    - The disease is locally plausible: either common, present, or subject to an epidemic alert in the patient’s county.
+    Otherwise, set Flag = NO.
 
-    Keep reasoning to one concise line per HIGH disease.
+    Output Rules:
 
-    Clarifying Questions: include 2-3 if there are plausible matches; otherwise output NONE.
-    Recommendation: single line if there are plausible matches; otherwise NONE.
+    List only diseases with Flag = YES.
+
+    For each flagged disease, give one short reasoning line including both:
+    - why the symptoms match the suspected case definition, AND
+    - why the disease is locally plausible based on prevalence or epidemic alerts.
+
+
+    If none are flagged, output exactly: NONE.
+
+    Clarifying Questions: If ≥1 disease flagged, provide 2–3 concise questions to guide further evaluation. If none flagged, return NONE.
+
+    Recommendation: Provide a single next-step recommendation if ≥1 disease flagged, otherwise NONE.
 
 ## Case:
 {query}

@@ -100,8 +100,8 @@ case_metadata = [
 case_triage = {
   "complaint_today": "Yes",
   "complaints": [
-    {"complaint": "Vaginal bleeding", "duration": 3, "onset_status": "Sudden"},
-    {"complaint": "Pain during intercourse", "duration": 7, "onset_status": "Gradual"}
+    {"complaint": "Skin lesions", "duration": 3, "onset_status": "Sudden"},
+    {"complaint": "diarrhea", "duration": 7, "onset_status": "Gradual"}
   ],
   "sex": "Female",
   "age": 29,
@@ -120,7 +120,7 @@ case_triage = {
   "muac": 12,
   "nutrional_status": "Moderate malnutrition",
   "lmp": "2025-08-15",
-  "triage_notes": "Patient reporting pain during intercourse, family history of cervical cancer."
+  "triage_notes": "No prior history of similar complaints. Patient appears moderately ill."
 }
 
 case_encounter = {
