@@ -1,0 +1,82 @@
+{
+    "complaint_today": "Yes",
+    "clinical_notes": "Patient presents with sudden onset of profuse watery diarrhea and vomiting over the last 2 days.",
+    "complaints": [
+        {
+            "complaint": "Profuse watery diarrhea",
+            "duration": 2,
+            "onset_status": "Sudden"
+        },
+        {
+            "complaint": "Vomiting",
+            "duration": 2,
+            "onset_status": "Sudden"
+        },
+        {
+            "complaint": "Thirst and fatigue",
+            "duration": 1,
+            "onset_status": "Gradual"
+        }
+    ],
+    "medication": "No",
+    "drug_name": "",
+    "dosage": "",
+    "frequency": "",
+    "route_administration": "",
+    "herbal": "No",
+    "blood_transfusion": "No",
+    "surgical_history": "No",
+    "surgery_type": "",
+    "surgery_date": "",
+    "surgery_indication": "",
+    "admission_history": "Yes",
+    "admission_reason": "Severe dehydration due to acute watery diarrhea",
+    "admission_date": "2025-09-20",
+    "adverse_drug_reactions": "No",
+    "drug_reactions": [],
+    "menses_ever": "Yes",
+    "menarche_age": 13,
+    "lmp": "2025-08-25",
+    "menses_frequency": "Regular (28 days)",
+    "menstrual_characteristics": "Normal flow",
+    "menses_duration": 5,
+    "intermenstrual_bleeding": "No",
+    "intermenstrual_bleeding_symptoms": "",
+    "amenorrhea_reason": "Not Applicable",
+    "amenorrhea_other": "",
+    "gynacological_survey": "No",
+    "gynacological_name": "",
+    "fp_status": "Not on Family Planning",
+    "fp_method": "",
+    "fp_not_reason": [
+        "Currently ill"
+    ],
+    "trauma": "No",
+    "primary_doctor": "Yes",
+    "developmental_milestone": "Normal",
+    "milestone_delayed": "",
+    "milestone_regressed": "",
+    "mode_feeding": "Not applicable",
+    "exam_findings": [
+        "Severe dehydration",
+        "Sunken eyes",
+        "Loss of skin turgor",
+        "Weak pulse"
+    ],
+    "exam_notes": "Patient severely dehydrated with dry mucous membranes, hypotension, and rapid weak pulse.",
+    "abnormal_gait_finding": "Weak and unstable due to dehydration",
+    "cyanosis_type": "Peripheral cyanosis noted",
+    "dehydration_type": "Severe",
+    "finger_clubbing_grade": "",
+    "juandice_grading": "",
+    "Lymphadenopathy_site": "",
+    "oedema_site": "",
+    "pallor_location": "Conjunctiva",
+    "pallor_site": "Generalized",
+    "system_examination": "Abnormal",
+    "system_reviews": [
+        "Gastrointestinal system",
+        "Cardiovascular system",
+        "Respiratory system"
+    ]
+}

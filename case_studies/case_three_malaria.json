@@ -1,0 +1,88 @@
+{
+    "complaint_today": "Yes",
+    "clinical_notes": "Patient presents with fever, chills, and headache for the last 4 days. Travel history to a malaria-endemic area (Kisumu County).",
+    "complaints": [
+        {
+            "complaint": "Fever",
+            "duration": 4,
+            "onset_status": "Sudden"
+        },
+        {
+            "complaint": "Chills",
+            "duration": 4,
+            "onset_status": "Sudden"
+        },
+        {
+            "complaint": "Headache",
+            "duration": 3,
+            "onset_status": "Gradual"
+        },
+        {
+            "complaint": "Joint pain",
+            "duration": 2,
+            "onset_status": "Gradual"
+        }
+    ],
+    "medication": "No",
+    "drug_name": "",
+    "dosage": "",
+    "frequency": "",
+    "route_administration": "",
+    "herbal": "Yes",
+    "herbal_details": "Patient has been taking neem leaves at home.",
+    "blood_transfusion": "No",
+    "surgical_history": "No",
+    "admission_history": "No",
+    "adverse_drug_reactions": "No",
+    "menses_ever": "Yes",
+    "menarche_age": 14,
+    "lmp": "2025-09-01",
+    "menses_frequency": "Regular (28–30 days)",
+    "menstrual_characteristics": "Normal flow",
+    "menses_duration": 4,
+    "intermenstrual_bleeding": "No",
+    "amenorrhea_reason": "Not Applicable",
+    "gynacological_survey": "No",
+    "fp_status": "Not on Family Planning",
+    "fp_method": "",
+    "fp_not_reason": [
+        "Not sexually active"
+    ],
+    "trauma": "No",
+    "primary_doctor": "Yes",
+    "developmental_milestone": "Normal",
+    "mode_feeding": "Not Applicable",
+    "exam_findings": [
+        "Fever (38.7°C)",
+        "Pallor",
+        "Splenomegaly"
+    ],
+    "exam_notes": "Patient febrile, conjunctival pallor present, spleen palpable 3cm below costal margin.",
+    "abnormal_gait_finding": "Weakness, fatigued appearance",
+    "cyanosis_type": "None",
+    "dehydration_type": "Mild dehydration",
+    "finger_clubbing_grade": "None",
+    "juandice_grading": "Mild scleral icterus",
+    "Lymphadenopathy_site": "None",
+    "oedema_site": "None",
+    "pallor_location": "Conjunctiva",
+    "pallor_site": "Generalized",
+    "system_examination": "Abnormal",
+    "system_reviews": [
+        "Hematologic system",
+        "Gastrointestinal system"
+    ],
+    "diagnostic_tests": [
+        {
+            "test_name": "Malaria RDT",
+            "result": "Positive (P. falciparum)"
+        },
+        {
+            "test_name": "Blood smear",
+            "result": "High parasitemia"
+        }
+    ],
+    "admission_decision": "Yes",
+    "admission_reason": "Severe malaria (hyperparasitemia, fever, weakness)",
+    "admission_date": "2025-09-25"
+}
