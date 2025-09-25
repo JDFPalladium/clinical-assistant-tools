@@ -26,18 +26,6 @@ os.environ.get("OPENAI_API_KEY")
 def get_main_llm():
     return ChatOpenAI(model="gpt-4o", temperature=0)
 
-@lru_cache()
-def get_rag_retriever():
-    """
-    Load retriever for guideline documents.
-    """
-    # Global retriever (load global index)
-    global_index_path = "data/processed/lp/indices/Global"   # adjust to your real folder
-    storage_context_arv = StorageContext.from_defaults(persist_dir=global_index_path)
-    index_arv = load_index_from_storage(storage_context_arv)
-    retriever = VectorIndexRetriever(index=index_arv, similarity_top_k=2)
-    return retriever
-
 # ------------------------
 # Main function
 # ------------------------
