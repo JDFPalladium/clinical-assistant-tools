@@ -1,0 +1,80 @@
+{
+    "complaint_today": "Yes",
+    "clinical_notes": "Patient reports intermittent abdominal pain over the past week.",
+    "complaints": [
+        {
+            "complaint": "Vaginal bleeding",
+            "duration": 3,
+            "onset_status": "Sudden"
+        },
+        {
+            "complaint": "Pain during intercourse",
+            "duration": 7,
+            "onset_status": "Gradual"
+        }
+    ],
+    "medication": "Yes",
+    "drug_name": "Paracetamol",
+    "dosage": 500,
+    "frequency": "Twice daily",
+    "route_administration": "Oral",
+    "herbal": "No",
+    "blood_transfusion": "No",
+    "surgical_history": "Yes",
+    "surgery_type": "Appendectomy",
+    "surgery_date": "2020-05-12",
+    "surgery_indication": "Appendicitis",
+    "admission_history": "Yes",
+    "admission_reason": "Severe dehydration",
+    "admission_date": "2021-03-20",
+    "adverse_drug_reactions": "Yes",
+    "drug_reactions": [
+        {
+            "reaction_medicine": "Amoxicillin",
+            "reaction_type": "Rash",
+            "reaction_severity": "Severe",
+            "reaction_date": "2022-09-15",
+            "reaction_action": "Stopped medication"
+        }
+    ],
+    "menses_ever": "Yes",
+    "menarche_age": 13,
+    "lmp": "2025-08-15",
+    "menses_frequency": "Regular (28 days)",
+    "menstrual_characteristics": "Normal flow",
+    "menses_duration": 5,
+    "intermenstrual_bleeding": "No",
+    "intermenstrual_bleeding_symptoms": "",
+    "amenorrhea_reason": "Not Applicable",
+    "amenorrhea_other": "",
+    "gynacological_survey": "No",
+    "gynacological_name": "",
+    "fp_status": "On Family Planning",
+    "fp_method": "Oral Contraceptive Pills",
+    "fp_not_reason": [],
+    "trauma": "No",
+    "primary_doctor": "Yes",
+    "developmental_milestone": "Normal",
+    "milestone_delayed": "",
+    "milestone_regressed": "",
+    "mode_feeding": "Exclusive breastfeeding",
+    "exam_findings": [
+        "Pallor",
+        "Oedema"
+    ],
+    "exam_notes": "Mild pallor observed, slight pedal oedema.",
+    "abnormal_gait_finding": "",
+    "cyanosis_type": "",
+    "dehydration_type": "",
+    "finger_clubbing_grade": "",
+    "juandice_grading": "",
+    "Lymphadenopathy_site": "",
+    "oedema_site": "Pedal",
+    "pallor_location": "Conjunctiva",
+    "pallor_site": "Generalized",
+    "system_examination": "Abnormal",
+    "system_reviews": [
+        "Respiratory system",
+        "Cardiovascular system"
+    ]
+}

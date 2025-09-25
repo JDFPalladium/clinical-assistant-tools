@@ -1,0 +1,97 @@
+{
+    "complaint_today": "Yes",
+    "clinical_notes": "Patient presents with progressive weight loss, early satiety, persistent abdominal discomfort, nausea, and occasional vomiting of blood.",
+    "complaints": [
+        {
+            "complaint": "Abdominal pain",
+            "duration": 90,
+            "onset_status": "Gradual"
+        },
+        {
+            "complaint": "Early satiety",
+            "duration": 60,
+            "onset_status": "Gradual"
+        },
+        {
+            "complaint": "Nausea and vomiting",
+            "duration": 45,
+            "onset_status": "Intermittent"
+        },
+        {
+            "complaint": "Hematemesis (vomiting blood)",
+            "duration": 15,
+            "onset_status": "Sudden"
+        },
+        {
+            "complaint": "Unexplained weight loss",
+            "duration": 120,
+            "onset_status": "Gradual"
+        },
+        {
+            "complaint": "Fatigue",
+            "duration": 90,
+            "onset_status": "Gradual"
+        }
+    ],
+    "medication": "Yes",
+    "drug_name": "Omeprazole",
+    "dosage": 20,
+    "frequency": "Once daily",
+    "route_administration": "Oral",
+    "herbal": "No",
+    "blood_transfusion": "Yes",
+    "transfusion_reason": "Severe anemia",
+    "surgical_history": "Yes",
+    "surgery_type": "Gastric biopsy",
+    "surgery_date": "2024-10-15",
+    "surgery_indication": "Suspected malignancy",
+    "admission_history": "Yes",
+    "admission_reason": "Severe anemia and persistent vomiting",
+    "admission_date": "2025-01-10",
+    "adverse_drug_reactions": "No",
+    "drug_reactions": [],
+    "menses_ever": "Yes",
+    "menarche_age": 13,
+    "lmp": "2025-08-01",
+    "menses_frequency": "Regular (28 days)",
+    "menstrual_characteristics": "Normal flow",
+    "menses_duration": 5,
+    "intermenstrual_bleeding": "No",
+    "intermenstrual_bleeding_symptoms": "",
+    "amenorrhea_reason": "Not Applicable",
+    "amenorrhea_other": "",
+    "gynacological_survey": "No",
+    "gynacological_name": "",
+    "fp_status": "Not on Family Planning",
+    "fp_method": "",
+    "fp_not_reason": [
+        "No need currently"
+    ],
+    "trauma": "No",
+    "primary_doctor": "Yes",
+    "developmental_milestone": "Normal",
+    "milestone_delayed": "",
+    "milestone_regressed": "",
+    "mode_feeding": "Exclusive breastfeeding",
+    "exam_findings": [
+        "Pallor",
+        "Epigastric tenderness",
+        "Abdominal mass"
+    ],
+    "exam_notes": "Marked pallor observed, palpable epigastric mass, and mild abdominal tenderness.",
+    "abnormal_gait_finding": "Weakness due to anemia",
+    "cyanosis_type": "",
+    "dehydration_type": "Mild",
+    "finger_clubbing_grade": "",
+    "juandice_grading": "Mild icterus",
+    "Lymphadenopathy_site": "Left supraclavicular (Virchow's node)",
+    "oedema_site": "Pedal",
+    "pallor_location": "Conjunctiva",
+    "pallor_site": "Generalized",
+    "system_examination": "Abnormal",
+    "system_reviews": [
+        "Gastrointestinal system",
+        "Hematological system",
+        "Nutritional status"
+    ]
+}
