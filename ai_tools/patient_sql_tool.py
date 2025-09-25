@@ -120,12 +120,12 @@ def get_main_llm():
     return ChatOpenAI(model="gpt-4o", temperature=0)
 
 @lru_cache()
-def get_rag_retriever():
+def get_rag_retriever(country="Kenya"):
     """
     Load retriever for guideline documents.
     """
     # Global retriever (load global index)
-    global_index_path = "data/processed/lp/indices/Global"   # adjust to your real folder
+    global_index_path = f"data/{country}/processed/lp/indices/Global"   # adjust to your real folder
     storage_context_arv = StorageContext.from_defaults(persist_dir=global_index_path)
     index_arv = load_index_from_storage(storage_context_arv)
     retriever = VectorIndexRetriever(index=index_arv, similarity_top_k=2)
@@ -135,7 +135,7 @@ def get_rag_retriever():
 # ------------------------
 # Main function
 # ------------------------
-def sql_chain(query: str, llm, pk_hash: str, search_guidelines = False, filter_tables = False) -> dict:
+def sql_chain(query: str, llm, pk_hash: str, country:str, search_guidelines = False, filter_tables = False) -> dict:
     """
     Retrieves patient data from SQL and summarizes it along with RAG guideline context.
     """
@@ -166,7 +166,7 @@ def sql_chain(query: str, llm, pk_hash: str, search_guidelines = False, filter_t
 
     # Only invoke RAG if needed
     if use_guidelines:
-        retriever = get_rag_retriever()
+        retriever = get_rag_retriever(country=country)
         sources = retriever.retrieve(query)
         summarization_prompt = build_summarization_prompt(query, sources)
         guidelines_summary = summarizer_llm.invoke(summarization_prompt).content
@@ -194,12 +194,13 @@ def sql_chain(query: str, llm, pk_hash: str, search_guidelines = False, filter_t
 # ------------------------
 # Standalone wrapper
 # ------------------------
-def run_sql_standalone(query: str, pk_hash: str, search_guidelines=True, filter_tables = False) -> dict:
+def run_sql_standalone(query: str, pk_hash: str, country:str, search_guidelines=True, filter_tables = False) -> dict:
     llm = get_main_llm()
     query_redacted = detect_and_redact_phi(query)["redacted_text"]
     return sql_chain(query=query_redacted,
                       llm=llm, 
                       pk_hash=pk_hash, 
+                      country=country,
                       search_guidelines=search_guidelines,
                       filter_tables=filter_tables)
 
@@ -212,6 +213,7 @@ if __name__ == "__main__":
     pk = input("Enter your patient PK hash: ")
     sg = input("Search guidelines? (y/n): ").strip().lower() == 'y'
     ft = input("Filter tables? (y/n): ").strip().lower() == 'y'
-    result = run_sql_standalone(q, pk, search_guidelines=sg, filter_tables=ft)
+    c = input("Enter country (default: Kenya): ").strip() or "Kenya"
+    result = run_sql_standalone(q, pk, country=c, search_guidelines=sg, filter_tables=ft)
     print("\n--- SQL Tool Result ---")
     print(result["answer"])
