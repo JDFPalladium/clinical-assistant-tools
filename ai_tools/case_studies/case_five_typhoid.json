@@ -1,32 +1,37 @@
 {
     "complaint_today": "Yes",
-    "clinical_notes": "Patient presents with fever, chills, and sweating for the past 5 days, associated with headache and fatigue.",
+    "clinical_notes": "Patient presents with persistent fever, abdominal discomfort, and generalized body weakness for the past 10 days.",
     "complaints": [
         {
             "complaint": "Fever",
-            "duration": 5,
-            "onset_status": "Sudden"
-        },
-        {
-            "complaint": "Chills and Sweating",
-            "duration": 5,
-            "onset_status": "Intermittent"
-        },
-        {
-            "complaint": "Headache",
-            "duration": 4,
+            "duration": 10,
             "onset_status": "Gradual"
         },
         {
-            "complaint": "Fatigue/Weakness",
+            "complaint": "Abdominal pain",
+            "duration": 8,
+            "onset_status": "Gradual"
+        },
+        {
+            "complaint": "Headache",
+            "duration": 7,
+            "onset_status": "Gradual"
+        },
+        {
+            "complaint": "Constipation",
             "duration": 5,
+            "onset_status": "Gradual"
+        },
+        {
+            "complaint": "Body weakness",
+            "duration": 10,
             "onset_status": "Gradual"
         }
     ],
     "medication": "Yes",
-    "drug_name": "Over-the-counter antipyretics",
-    "dosage": "Varied",
-    "frequency": "As needed",
+    "drug_name": "Paracetamol",
+    "dosage": 500,
+    "frequency": "Thrice daily",
     "route_administration": "Oral",
     "herbal": "Yes",
     "blood_transfusion": "No",
@@ -35,13 +40,13 @@
     "surgery_date": "",
     "surgery_indication": "",
     "admission_history": "Yes",
-    "admission_reason": "Severe fever with dehydration",
-    "admission_date": "2024-11-10",
+    "admission_reason": "Persistent high fever, dehydration",
+    "admission_date": "2025-09-15",
     "adverse_drug_reactions": "No",
     "drug_reactions": [],
     "menses_ever": "Yes",
     "menarche_age": 14,
-    "lmp": "2025-08-20",
+    "lmp": "2025-09-01",
     "menses_frequency": "Regular (28 days)",
     "menstrual_characteristics": "Normal flow",
     "menses_duration": 4,
@@ -52,7 +57,7 @@
     "gynacological_survey": "No",
     "gynacological_name": "",
     "fp_status": "On Family Planning",
-    "fp_method": "Injectable Contraceptives",
+    "fp_method": "Implant",
     "fp_not_reason": [],
     "trauma": "No",
     "primary_doctor": "Yes",
@@ -61,24 +66,24 @@
     "milestone_regressed": "",
     "mode_feeding": "Not applicable",
     "exam_findings": [
-        "High fever (39.5°C)",
-        "Pallor",
-        "Splenomegaly",
-        "Dehydration"
+        "High fever (39.2°C)",
+        "Abdominal tenderness",
+        "Mild hepatomegaly",
+        "Splenomegaly"
     ],
-    "exam_notes": "difficulty breathing, pale conjunctiva, enlarged spleen, mild dehydration.",
+    "exam_notes": "Patient febrile, abdominal tenderness noted, mild liver and spleen enlargement.",
     "abnormal_gait_finding": "",
     "cyanosis_type": "",
     "dehydration_type": "Mild",
     "finger_clubbing_grade": "",
-    "juandice_grading": "No",
+    "juandice_grading": "",
     "Lymphadenopathy_site": "",
     "oedema_site": "",
     "pallor_location": "Conjunctiva",
-    "pallor_site": "Generalized",
+    "pallor_site": "Mild",
     "system_examination": "Abnormal",
     "system_reviews": [
-        "Hematologic system",
-        "Gastrointestinal system"
+        "Gastrointestinal system",
+        "Hematologic system"
     ]
 }
