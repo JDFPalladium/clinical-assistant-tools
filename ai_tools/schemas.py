@@ -183,3 +183,131 @@ case_encounter = {
     "system_examination": "Abnormal",
     "system_reviews": ["Respiratory system", "Cardiovascular system"]
 }
+
+triage_actual = {
+	"encounterProviders": [
+		{
+			"provider": "48b55692-e061-4ffa-b1f2-fd4aaf506224",
+			"encounterRole": "a0b03050-c99b-11e0-9572-0800200c9a66"
+		}
+	],
+	"location": "233de33e-2778-4f9a-a398-fa09da9daa14",
+	"patient": "72dedba8-e926-4500-9720-11db162bb67f",
+	"visit": "9e84508c-2107-4d91-87dd-edc06429f948",
+	"encounterType": "d1059fb9-a079-4feb-a749-eedd709ae542",
+	"form": "37f6bd8d-586a-4169-95fa-5781f987fe62",
+	"obs": [
+		{
+			"concept": "5219AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+			"value": "1065AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+		},
+		{
+			"groupMembers": [
+				{
+					"concept": "5219AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+					"value": "151AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+				},
+				{
+					"concept": "159368AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+					"value": 3
+				},
+				{
+					"concept": "d7a3441d-6aeb-49be-b7d6-b2a3bb39e78d",
+					"value": "1499AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+				}
+			],
+			"voided": "false",
+			"concept": "160531AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+		},
+		{
+			"concept": "162753AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+			"value": "162752AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+		},
+		{
+			"concept": "163520AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+			"value": "1065AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+		},
+		{
+			"concept": "162643AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+			"value": "160282AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+		},
+		{
+			"concept": "162643AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+			"value": "162645AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+		},
+		{
+			"concept": "162643AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+			"value": "162644AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+		},
+		{
+			"concept": "162643AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+			"value": "120345AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+		},
+		{
+			"concept": "162643AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+			"value": "159508AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+		},
+		{
+			"concept": "5088AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+			"value": 36
+		},
+		{
+			"concept": "167231AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+			"value": "166242AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+		},
+		{
+			"concept": "5087AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+			"value": 88
+		},
+		{
+			"concept": "5085AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+			"value": 120
+		},
+		{
+			"concept": "5086AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+			"value": 80
+		},
+		{
+			"concept": "5242AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+			"value": 88
+		},
+		{
+			"concept": "5092AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+			"value": 200
+		},
+		{
+			"concept": "165932AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+			"value": "162738AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+		},
+		{
+			"concept": "5089AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+			"value": 99
+		},
+		{
+			"concept": "5090AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+			"value": 190
+		},
+		{
+			"concept": "1342AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+			"value": 27.4
+		},
+		{
+			"concept": "1343AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+			"value": 11
+		},
+		{
+			"concept": "167392AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+			"value": "114413AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+		},
+		{
+			"concept": "1427AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+			"value": "2025-10-01 00:00:00"
+		},
+		{
+			"concept": "159395AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+			"value": "overweight"
+		}
+	],
+	"orders": [],
+	"diagnoses": []
+}

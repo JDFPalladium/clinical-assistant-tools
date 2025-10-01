@@ -5,6 +5,7 @@ import math
 import sqlite3
 from collections import Counter
 from datetime import datetime
+import pandas as pd
 from typing import List
 from unittest import case
 
@@ -17,8 +18,9 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
 from dotenv import load_dotenv
 # from ai_tools.phi_filter import detect_and_redact_phi
-from ai_tools.prep_case import prep_case
-from ai_tools.schemas import case_metadata
+# from ai_tools.prep_case import prep_case
+# from ai_tools.schemas import case_metadata
+from ai_tools.prep_triage_case import decode_obs
 
 if os.path.exists("config.env"):
     load_dotenv("config.env")
@@ -104,11 +106,21 @@ Return the matching keywords as a JSON object with a single key "keywords" whose
     })
     return output.keywords
 
-def build_semantic_query(case: dict) -> str:
-    complaints_list = [c["complaint"] for c in case.get("complaints", [])]
-    complaints = ", ".join(complaints_list)
-    notes = case.get("triage_notes", "")
-    return f"Complaints: {complaints}. Notes: {notes}"
+def build_semantic_query(decoded_obs):
+    semantic_bits = []
+
+    for concept, val in decoded_obs:
+        if concept == "Complaint":
+            # Skip "Yes/No" placeholder complaints
+            if str(val).lower() not in ["yes", "no"]:
+                semantic_bits.append(str(val))
+        elif concept == "Triage Notes":
+            semantic_bits.append(str(val))
+        # You can add more semantic-rich fields here if needed
+
+    # Deduplicate and join nicely
+    semantic_query = ", ".join(dict.fromkeys(semantic_bits))  # preserves order
+    return semantic_query
 
 def hybrid_search_with_query_keywords(query, vstore, documents, keyword_list, llm, keyword_weights, top_k=3):
     # Semantic search
@@ -147,6 +159,13 @@ def idsr_check(query, llm=None, sitecode=None):
     _lazy_load()
     llm = llm or _llm_langchain
 
+    # Example: mapping dataframe (you will load your full one from CSV)
+    mapping_df = pd.read_csv("data/processed/TriageFormDecoding.csv")
+
+    # Build lookup dictionaries
+    concept_map = mapping_df.query("concept == 'concept'").set_index("key")["value"].to_dict()
+    value_map   = mapping_df.query("concept == 'value'").set_index("key")["value"].to_dict()
+
     if isinstance(query, dict):
         query_dict = query
     elif isinstance(query, str):
@@ -157,8 +176,17 @@ def idsr_check(query, llm=None, sitecode=None):
     else:
         raise TypeError(f"Query must be dict or JSON string, got {type(query)}")
 
-    query = prep_case(query_dict, case_metadata)
-    sem_query = build_semantic_query(query_dict)
+    # query = prep_case(query_dict, case_metadata)
+    # Parse and decode the case payload
+    query = decode_obs(query_dict["obs"], concept_map, value_map)
+
+    # Get the complaints and notes to build semantic query
+    sem_query = build_semantic_query(query)
+
+    # Format the decoded observations as text for the prompt
+    def format_obs_as_text(decoded_obs):
+        return "\n".join([f"{concept}: {value}" for concept, value in decoded_obs])
+    query = format_obs_as_text(query)
 
     results = hybrid_search_with_query_keywords(
         sem_query, _vectorstore, _tagged_documents, _keywords, llm, _keyword_weights
