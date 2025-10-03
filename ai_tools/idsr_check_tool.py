@@ -182,6 +182,7 @@ def idsr_check(query, llm=None, sitecode=None):
 
     # Get the complaints and notes to build semantic query
     sem_query = build_semantic_query(query)
+    print(sem_query)
 
     # Format the decoded observations as text for the prompt
     def format_obs_as_text(decoded_obs):

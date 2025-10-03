@@ -81,29 +81,42 @@ def patient_data_to_text(patient_id, conn, table_mappings, decoder, tables_to_in
         else:
             patient_dict[display_name] = records
 
-        # --- NEW: group by column topic ---
-        for col, col_info in mapping["columns"].items():
-            topic = col_info.get("topic", "Other")
-            display_name = col_info["display_name"]
-            if display_name in df.columns:
-                values = df[display_name].dropna().tolist()
-                for v in values:
-                    topic_dict.setdefault(topic, []).append(f"{display_name}: {v}")
+        # --- NEW: build topic_dict as structured list of dicts ---
+        for record in records:
+            for col, col_info in mapping["columns"].items():
+                topic = col_info.get("topic", "Other")
+                display_name_col = col_info["display_name"]
+                if display_name_col in record and pd.notnull(record[display_name_col]):
+                    # row-level dict (all values for this observation)
+                    row_dict = {k: v for k, v in record.items() if pd.notnull(v)}
+                    topic_dict.setdefault(topic, []).append(row_dict)
+
+        # # --- NEW: group by column topic ---
+        # for col, col_info in mapping["columns"].items():
+        #     topic = col_info.get("topic", "Other")
+        #     display_name = col_info["display_name"]
+        #     if display_name in df.columns:
+        #         values = df[display_name].dropna().tolist()
+        #         for v in values:
+        #             topic_dict.setdefault(topic, []).append(f"{display_name}: {v}")
 
 
-    # Convert patient_dict to compact text
-    lines = []
-    for table_name, content in patient_dict.items():
-        lines.append(f"{table_name}:")
-        if isinstance(content, dict):
-            for k, v in content.items():
-                lines.append(f"  - {k}: {v}")
-        elif isinstance(content, list):
-            for record in content:
-                record_lines = [f"{k}: {v}" for k, v in record.items()]
-                lines.append("  - " + ", ".join(record_lines))
-        lines.append("")  # blank line between tables
+    # # Convert patient_dict to compact text
+    # lines = []
+    # for table_name, content in patient_dict.items():
+    #     lines.append(f"{table_name}:")
+    #     if isinstance(content, dict):
+    #         # single row
+    #         for k, v in content.items():
+    #             lines.append(f"  - {k}: {v}")
+    #     elif isinstance(content, list):
+    #         # multiple rows → pretty format
+    #         for record in content:
+    #             lines.append("  -")
+    #             for k, v in record.items():
+    #                 lines.append(f"      {k}: {v}")
+    #     lines.append("")  # blank line between tables
 
-    compact_text = "\n".join(lines)
+    # compact_text = "\n".join(lines)
 
-    return compact_text, topic_dict
+    return patient_dict, topic_dict
